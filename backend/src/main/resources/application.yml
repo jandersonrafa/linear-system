@@ -1,0 +1,16 @@
+spring:
+  mvc:
+    dispatch-options-request=true:
+server:
+  port: 8082
+logging:
+  level.loggers.org.skife.jdbi.v2: TRACE
+---
+
+spring:
+  profiles: test
+
+---
+
+spring:
+  profiles: prod

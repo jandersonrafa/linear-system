@@ -1,0 +1,236 @@
+html,
+body {
+  /* background-color: #e3e4db; */
+  
+}
+
+
+
+/* Style the header */
+#section-header {
+  color: white;
+  position: relative;
+  z-index: 998;
+  height: 64px;
+}
+#section-header-navbar {
+  position: fixed;
+  width: 100%;
+  nav {
+    background: #64b0bb;
+  }
+
+}
+
+/* Container for flexboxes */
+#section-footer {
+  .footer {
+    text-align: center;
+    width: 100%;
+    padding: 10px;
+    background: #64b0bb;
+    .content {
+      opacity: 0.5;
+      color: gray;
+      font-weight: 500;
+      a:hover {
+        color: white;
+      }
+    }
+  }
+}
+
+/* Style the content */
+#section-article {
+  background-color: rgba(0, 0, 0, 0.0);
+  padding-top: 10px;
+
+  .carousel {
+    .active {
+        img {
+          margin-left: -50px;
+          // height: 250px;
+          width: 300px;
+      }
+    }
+
+  }
+}
+
+.brand-logo {
+  width: 120px;
+}
+
+.map-div {
+  #map {
+    border: 2px solid #ee6e73;
+    width: 150px;
+    height: 150px;
+  }
+}
+
+.card {
+  .card-content {
+    text-align: justify;
+    .card-title {
+      font-weight: 400 ;
+    }
+  }
+  // .card-action {
+  //   background-color: #64b0bb !important;
+  // }
+}
+
+.tag-font-small {
+  .chip {
+    font-size: 9px !important;
+  }
+}
+.card_organization {
+  height: 250px;
+  .card {
+    .card-action {
+        text-align: center;
+        padding: 1px;
+        .chip {
+          font-size: 10px;
+          font-weight: 700;
+        }
+    }
+    .card-content {
+        text-align: center;
+        line-height: normal;
+        
+        
+        padding-bottom: 4px;
+        padding-top: 4px;
+        .card-title {
+          line-height: normal;
+        margin: 0px;
+        font-size: 0.8em;
+        i {
+          margin-left: 0px;
+        }
+      }
+    
+                 
+  }
+
+    // .card-content {
+    //   text-align: center;
+    //   padding: 8px;
+    //   padding-bottom: 3px;
+    //   padding-top: 3px;
+    // }
+    // .card-action {
+    //   text-align: center;
+    //   padding: 8px;
+    //   a {
+    //     margin-right: 0px !important;
+    //     font-size: 0.7em;
+    //   }
+    // }
+  }
+}
+
+// .card-title {
+//   FONT-WEIGHT: 400 !IMPORTANT;
+// }
+
+.mapouter{
+  position:relative;
+  text-align:right;
+  height:100%;
+  width:100%;
+}
+.gmap_canvas {
+  overflow:hidden;
+  background:none!important;
+  height:100%;
+  width:100%;
+}
+
+.highlighted-button {
+  cursor: pointer;
+  .highlighted-button__a {
+    font-size: 13px;
+    padding: 10px 6% 10px 6%;
+    border-radius: 25px;
+    border: 3px solid #64b0bb;
+    font-weight: bolder;
+    color: white !important;
+    transition: border-color 0.4s ease 0s, background-color 0.4s ease 0s;
+    background: #eebe1a;
+  }
+  .highlighted-button__a:hover {
+    color: #64b0bb !important;
+    background: white;
+  }
+}
+
+.login-form {
+  margin-top: 35px;
+}
+
+.a-enter-vr {
+  position: fixed !important;
+}
+
+.frame__scene {
+  position: relative;
+  height: 0;
+  width: 100%;
+  padding-top: 56.25%;
+
+  .scene__ascene {
+    position: absolute;
+    // width: 500px;
+    // height: 500px;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+}
+[type="checkbox"]:not(:checked), [type="checkbox"]:checked {
+  position: unset !important;
+}
+
+.makerspace-detail{
+  .frame__scene {
+    margin-top: 7px;
+  }
+  .makerspace-detail__form-content {
+    height: 466px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .makerspace-detail__table-add{
+    float: right;
+  }
+  .makerspace-detail__links {
+    display: flex;
+    flex-wrap: wrap; /* Optional. only if you want the items to wrap */
+    justify-content: center; /* For horizontal alignment */
+    align-items: center; /* For vertical alignment */
+    canvas {
+      margin-left: unset;
+    }
+  }
+}
+
+.makerspace-table-tool {
+  .collapsible-body {
+    padding-top: 0px;
+  }
+}
+.makerspace-table-detail__table-tool-add{
+  float: right;
+}
+
+.makerspace-simulator {
+  a-scene {
+    margin-top: 7px;
+    height: 78% !important;
+  }
+}
