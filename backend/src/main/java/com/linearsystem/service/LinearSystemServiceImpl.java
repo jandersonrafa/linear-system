@@ -1,99 +1,123 @@
 package com.linearsystem.service;
 
 import com.linearsystem.model.Params;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Service
 public class LinearSystemServiceImpl implements LinearSystemService {
 
     @Override
-    public Double[] calculate(Params params, SseEmitter sseEmitter) {
-        int matrizSize = params.getMatriz().length;
-
-        boolean converge = converge(params.getMatriz());
-        if (converge) {
-
-            Double[][] pivotamento = pivotamento(params.getMatriz(), matrizSize);
-            Double[] resultadosEtapas = metodoGaus(pivotamento, matrizSize, sseEmitter, params.getMaxLoop(), params.getRate());
-            printMatriz(resultadosEtapas);
+    @Async
+    public BigDecimal[] calculate(Params params, SseEmitter sseEmitter) {
+        try {
+            int matrizSize = params.getMatriz().length;
+            BigDecimal[][] pivotamento = pivotamento(params.getMatriz(), matrizSize);
+            BigDecimal total = params.getMatriz()[0][matrizSize];
+            BigDecimal[] resultadosEtapas = metodoGaus(pivotamento, matrizSize, sseEmitter, params, total);
+            sseEmitter.complete();
             return resultadosEtapas;
-        } else {
-            throw new RuntimeException("Não converge");
+        } catch (Exception ex) {
+            sseEmitter.completeWithError(ex);
+            return null;
         }
     }
 
-    private void printMatriz(Double[] resultadosEtapas) {
+    private void printMatriz(BigDecimal[] resultadosEtapas) {
         for (int line = 0; line < resultadosEtapas.length; line++) {
             System.out.println("X" + line + 1 + ": " + resultadosEtapas[line] + "|");
         }
     }
 
-    private Double[] metodoGaus(Double[][] pivotamento, int matrizSize, SseEmitter sseEmitter, Integer maxLoop, Long rate) {
-        Double[][] matrizEtapa = new Double[matrizSize][matrizSize + 1];
-        Double[] resultadosEtapas = new Double[matrizSize];
+    private BigDecimal[] metodoGaus(BigDecimal[][] pivotamento, int matrizSize, SseEmitter sseEmitter, Params params, BigDecimal total) {
+        BigDecimal[] resultadosEtapas = new BigDecimal[matrizSize];
         for (int column = 0; column < matrizSize; column++) {
-            resultadosEtapas[column] = 0.0;
+            resultadosEtapas[column] = BigDecimal.ZERO;
         }
-        recursiveGauss(pivotamento, matrizSize, resultadosEtapas, 0, sseEmitter, maxLoop, rate);
+        recursiveGauss(pivotamento, matrizSize, resultadosEtapas, 0, sseEmitter, params, total);
         return resultadosEtapas;
     }
 
-    private void sendEmitter(SseEmitter sseEmitter, Object resultadosEtapas) {
+    private void sendEmitter(SseEmitter sseEmitter, Object resultadosEtapas, Params params) {
         try {
+            final Integer millisecondsInterval = params.getMillisecondsInterval();
             sseEmitter.send(resultadosEtapas);
-        } catch (IOException e) {
+            if (millisecondsInterval != null && millisecondsInterval > 0) {
+                Thread.sleep(millisecondsInterval);
+            }
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    private void recursiveGauss(Double[][] pivotamento, int matrizSize, Double[] resultadoEtapaAnterior, int interacoes, SseEmitter sseEmitter, Integer maxLoop, Long rate) {
+    private void recursiveGauss(BigDecimal[][] pivotamento, int matrizSize, BigDecimal[] resultadoEtapaAnterior, int interacoes, SseEmitter sseEmitter, Params params, BigDecimal total) {
         ++interacoes;
-//        Double[] resultadosEtapaAtual = new Double[pivotamento.length];
-        if (interacoes >= maxLoop) {
-            sendEmitter(sseEmitter, resultadoEtapaAnterior);
+//        BigDecimal[] resultadosEtapaAtual = new BigDecimal[pivotamento.length];
+        BigDecimal error = calculateError(resultadoEtapaAnterior, params.getMatriz(), total);
+        sendEmitter(sseEmitter, createMessage(resultadoEtapaAnterior, interacoes, error), params);
+        if (interacoes >= params.getMaxLoop() || error.compareTo(params.getComputerError()) != 1) {
             return;
         } else {
-            String message = "";
             for (int line = 0; line < matrizSize; line++) {
-                Double columnOne = pivotamento[line][1];
-                Double resultLine = columnOne;
+                BigDecimal columnOne = pivotamento[line][1];
+                BigDecimal resultLine = columnOne;
                 for (int column = 2; column <= matrizSize; column++) {
-                    Double[] resultadoEtapaAnteriorRemoveLinhaAtual = new Double[resultadoEtapaAnterior.length - 1];
+                    BigDecimal[] resultadoEtapaAnteriorRemoveLinhaAtual = new BigDecimal[resultadoEtapaAnterior.length - 1];
                     int countLine = 0;
                     for (int lineResultadoEtapaAnterior = 0; lineResultadoEtapaAnterior < resultadoEtapaAnterior.length; lineResultadoEtapaAnterior++) {
                         if (lineResultadoEtapaAnterior != line) {
                             resultadoEtapaAnteriorRemoveLinhaAtual[countLine++] = resultadoEtapaAnterior[lineResultadoEtapaAnterior];
                         }
                     }
-                    Double columnMultiplyResultEtapaAnterior = pivotamento[line][column] * resultadoEtapaAnteriorRemoveLinhaAtual[column - 2];
-                    resultLine += columnMultiplyResultEtapaAnterior;
+                    BigDecimal columnMultiplyResultEtapaAnterior = pivotamento[line][column].multiply(resultadoEtapaAnteriorRemoveLinhaAtual[column - 2]);
+                    resultLine = resultLine.add(columnMultiplyResultEtapaAnterior);
                 }
-                message+=resultLine+"|";
                 resultadoEtapaAnterior[line] = resultLine;
             }
-            sendEmitter(sseEmitter, message);
-            recursiveGauss(pivotamento, matrizSize, resultadoEtapaAnterior, interacoes, sseEmitter, maxLoop, rate);
+            recursiveGauss(pivotamento, matrizSize, resultadoEtapaAnterior, interacoes, sseEmitter, params, total);
         }
 
     }
 
-    private Double[][] pivotamento(Double[][] matriz, Integer matrizSize) {
-        Double[][] novaMatriz = new Double[matrizSize][matrizSize + 1];
+    private BigDecimal calculateError(BigDecimal[] resultadoEtapaAnterior, BigDecimal[][] matrizOriginal, BigDecimal total) {
+        BigDecimal totalCalculated = BigDecimal.ZERO;
+        for (int i = 0; i < resultadoEtapaAnterior.length; i++) {
+            totalCalculated = totalCalculated.add(matrizOriginal[0][i].multiply(resultadoEtapaAnterior[i]));
+        }
+        return total.abs().subtract(totalCalculated.abs()).abs();
+    }
+
+    private Object createMessage(BigDecimal[] resultadoEtapaAnterior, Integer position, BigDecimal totalCalculated) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(position + "-");
+        for (int i = 0; i < resultadoEtapaAnterior.length; i++) {
+            stringBuilder.append("X" + (i + 1) + ": ");
+            stringBuilder.append(resultadoEtapaAnterior[i].setScale(8, RoundingMode.DOWN));
+            stringBuilder.append("|   ");
+        }
+        stringBuilder.append("|   Erro: " + totalCalculated.setScale(8, RoundingMode.DOWN));
+        return stringBuilder.toString();
+    }
+
+    private BigDecimal[][] pivotamento(BigDecimal[][] matriz, Integer matrizSize) {
+        BigDecimal[][] novaMatriz = new BigDecimal[matrizSize][matrizSize + 1];
 
 
         for (int line = 0; line < matrizSize; line++) {
-            Double valueDiagonal = matriz[line][line];
+            BigDecimal valueDiagonal = matriz[line][line];
             int position = 0;
-            novaMatriz[line][position++] = Double.valueOf(String.valueOf(line));
-            Double resultEquation = matriz[line][matrizSize];
-            novaMatriz[line][position++] = resultEquation / valueDiagonal;
+            novaMatriz[line][position++] = BigDecimal.valueOf(line);
+            BigDecimal resultEquation = matriz[line][matrizSize];
+            novaMatriz[line][position++] = resultEquation.divide(valueDiagonal);
             for (int column = 0; column < matrizSize; column++) {
-                Double valueLineColumn = matriz[line][column];
+                BigDecimal valueLineColumn = matriz[line][column];
                 if (line != column) {
-                    novaMatriz[line][position++] = (valueLineColumn * -1.0) / valueDiagonal;
+                    novaMatriz[line][position++] = (valueLineColumn.multiply(BigDecimal.valueOf(-1.0))).divide(valueDiagonal);
                     ;
                 }
             }
@@ -101,32 +125,33 @@ public class LinearSystemServiceImpl implements LinearSystemService {
         return novaMatriz;
     }
 
-    private boolean converge(Double[][] matriz) {
+    @Override
+    public boolean converge(BigDecimal[][] matriz) {
         int matrizSize = matriz.length;
-        Double[] beta = new Double[matrizSize];
+        BigDecimal[] beta = new BigDecimal[matrizSize];
         for (int line = 0; line < matrizSize; line++) {
-            Double sumColums = 0.0;
-            Double valueDiagonal = 0.0;
+            BigDecimal sumColums = BigDecimal.ZERO;
+            BigDecimal valueDiagonal = BigDecimal.ZERO;
             Integer positionBeta = 0;
             for (int column = 0; column < matrizSize; column++) {
-                Double valueLineColumn = matriz[line][column];
+                BigDecimal valueLineColumn = matriz[line][column];
                 if (line != column) {
-                    Double valuePositionBeforeBeta = getPositionBeta(beta, positionBeta);
-                    sumColums += (valuePositionBeforeBeta != null ? valueLineColumn * valuePositionBeforeBeta : valueLineColumn);
+                    BigDecimal valuePositionBeforeBeta = getPositionBeta(beta, positionBeta);
+                    sumColums = sumColums.add(valuePositionBeforeBeta != null ? valueLineColumn.multiply(valuePositionBeforeBeta) : valueLineColumn);
                 } else {
                     valueDiagonal = valueLineColumn;
                 }
             }
-            beta[line] = valueDiagonal > 0.0 ? sumColums / valueDiagonal : 10000.0;
-            if (beta[line] > 1.0) {
-                return false;
+            beta[line] = valueDiagonal.compareTo(BigDecimal.ZERO) == 1 ? sumColums.divide(valueDiagonal) : new BigDecimal(10000.0);
+            if (beta[line].compareTo(BigDecimal.ONE) == 1) {
+                throw new RuntimeException("Não converge");
             }
         }
         return true;
     }
 
-    private Double getPositionBeta(Double[] beta, Integer positionBeta) {
-        Double valueBeforeBeta = beta[positionBeta];
+    private BigDecimal getPositionBeta(BigDecimal[] beta, Integer positionBeta) {
+        BigDecimal valueBeforeBeta = beta[positionBeta];
         positionBeta = positionBeta + 1;
         return valueBeforeBeta;
     }

@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { Row, Col, Card, CardTitle, TextInput, Collection, CollectionItem } from 'react-materialize';
+import { Table, Row, Col, Card, CardTitle, TextInput, Collection, CollectionItem } from 'react-materialize';
 import HighlightedButton from './HighlightedButton';
 import { updateAuth } from './actions';
 import { bindActionCreators } from 'redux';
@@ -13,133 +13,161 @@ class Login extends Component {
     constructor(props) {
         super(props);
         this.handleChange = this.handleChange.bind(this);
-        this.removeMessage = this.removeMessage.bind(this)
-        this.resubmitMessage = this.resubmitMessage.bind(this)
-        this.clickResults = this.clickResults.bind(this);
+        this.handleChangeTotalVariables = this.handleChangeTotalVariables.bind(this);
+        this.handleChangeLinearSystem = this.handleChangeLinearSystem.bind(this);
+        this.renderLinearSystem = this.renderLinearSystem.bind(this);
+        this.renderLinearSystemHeader = this.renderLinearSystemHeader.bind(this);
+        this.renderLinearSystemLine = this.renderLinearSystemLine.bind(this);
+        this.calculateGauss = this.calculateGauss.bind(this)
         this.renderList = this.renderList.bind(this);
 
     }
 
-    componentDidMount() {
-        const body = [[10,2,1,7],[1,5,1,-8], [2,3,10,6]]
-
-        calculate(body)
-            .then(
-                (result) => {
-                    alertSuccess('Mensagem reenviada com sucesso!')
-                    let source = getEmitter(result)
-                    source.onmessage = (event) => {
-                        console.log("aqui", event)
-                    }
-                    source.onerror = function (event) {
-                        source.close();
-                    }
-                },
-                (error) => {
-                    alertError('Erro ao reenviar mensagem', '')
-                }
-            )
-    }
-
     state = {
         results: [],
-        messageSelected: {
-            originalHeaders: '',
-            originalMessage: ''
-        },
-        form: {
-            id: '',
-            resubmitHeaders: '',
-            resubmitMessage: ''
+        params: {
+            matriz: [[10, 2, 1, 7], [1, 5, 1, -8], [2, 3, 10, 6]],
+            maxLoop: 10,
+            computerError: 0.0001,
+            totalVariables: 3,
+            millisecondsInterval: 100
         }
     }
 
     handleChange = evt => {
-        this.setState({ form: { ...this.state.form, [evt.target.name]: event.target.value } });
+        this.setState({ params: { ...this.state.params, [evt.target.name]: evt.target.value } });
+    }
+    handleChangeTotalVariables = evt => {
+        const variables = new Number(evt.target.value)
+        let newMatriz = []
+        for (let i = 0; i < variables; i++) {
+            let pos = []
+            for (let e = 0; e <= variables; e++) {
+                pos.push(1)
+            }
+            newMatriz[i] = pos
+        }
+        this.setState({ params: { ...this.state.params, matriz: newMatriz, [evt.target.name]: new Number(evt.target.value) } });
     }
 
-    clickResults(row, index) {
-        this.state.results.forEach((r, i) => {
-            r.active = i === index
-        })
-
-        this.setState({
-            messageSelected: row,
-        });
-        this.setState({ form: { ...this.state.form, id: row.id } });
-    }
-
-    removeMessage() {
-        remove(this.state.form.id, this.state.form)
+    calculateGauss() {
+        this.setState({ results: [] });
+        calculate(this.state.params)
             .then(
                 (result) => {
-                    alertSuccess('Mensagem excluido com sucesso!')
+                    let source = getEmitter(result)
+                    alertSuccess('Calculando...')
+                    source.onmessage = (event) => {
+                        if (this.state.results.length % 20 === 0 ) {
+                            this.setState({ results: [] });
+                        }
+                        this.setState(state => {
+                            const list = state.results
+                            list.push(event.data);
+                            return {
+                                list,
+                                value: '',
+                            };
+                        });
+                    }
+                    source.onerror = (event) => {
+                        // alertError('Erro ao calcular!')
+                        source.close();
+                    }
                 },
                 (error) => {
-                    alertError('Erro ao excluir', error.response.data.message)
+                    const error2 = error && error.response && error.response.data && error.response.data.message
+                    alertError('Erro ao calcular', error2)
                 }
             )
-        event.preventDefault()
-    }
-    resubmitMessage() {
-        resubmit(this.state.form.id, this.state.form)
-            .then(
-                (result) => {
-                    alertSuccess('Mensagem reenviada com sucesso!')
-                },
-                (error) => {
-                    alertError('Erro ao reenviar mensagem', '')
-                }
-            )
-        event.preventDefault()
     }
 
     renderList(row, index) {
-        return (<CollectionItem className={row.active ? 'active' : ''} href="javascript:;" onClick={() => this.clickResults(row, index)}>
-            {index} - {row.queueName} - {row.typeAction}
+        return (<CollectionItem href="javascript:;" >
+            {row}
         </CollectionItem>)
+    }
+
+    renderLinearSystem(row, index) {
+        return (<tr href="javascript:;">
+            {row.map((r, i) => this.renderLinearSystemLine(r, i, index))}
+        </tr>)
+    }
+
+    renderLinearSystemHeader(row, index) {
+        const isFinishLine = (index) == this.state.params.totalVariables - 1
+        return (
+            <th>{"X" + (index + 1) + (isFinishLine ? " = " : " + ")}  </th>
+        )
+    }
+    renderLinearSystemLine(row, index, line) {
+        const isFinishLine = (index) == this.state.params.totalVariables
+
+        return (<td>
+            <TextInput name='value' value={this.state.params.matriz[line][index]}
+                onChange={(evt) => this.handleChangeLinearSystem(line, index, evt.target.value)}
+                label={isFinishLine ? "=" : ""}
+
+            /></td>)
+    }
+
+    handleChangeLinearSystem(line, column, value) {
+        const list = this.state.params.matriz;
+        list[line][column] = value
+        this.setState({ params: { ...this.state.params, matriz: list } });
     }
 
     render() {
         return (
             <div class="login">
                 <Row>
-                    <Col m={4} s={12}>
-                        <Card header={<CardTitle />}
-                            title="Mensagens encontrados" >
-                            <hr></hr>
-                            <Collection>
-                                {this.state.results.map(this.renderList)}
-                            </Collection>
-                        </Card>
-                    </Col>
-                    <Col m={6} s={12}>
+
+                    <Col m={12} s={12}>
                         <form>
                             <Card header={<CardTitle />}
                                 actions={[
                                     <Col m={12} s={12}>
-                                        <Col m={6} s={6}><HighlightedButton onClick={this.removeMessage} text="Excluir"></HighlightedButton></Col>
-                                        <Col m={6} s={6}><HighlightedButton onClick={this.resubmitMessage} text="Reenviar"></HighlightedButton></Col>
+                                        <Col m={6} s={6}><HighlightedButton onClick={this.calculateGauss} text="Calcular"></HighlightedButton></Col>
                                     </Col>,
                                     <br></br>
                                 ]}
-                                title="Queue Dead Letter" >
+                                title="Configuração" >
                                 <div class="makerspace-detail__form-content" >
                                     <Alert stack={{ limit: 2 }} />
                                     <hr></hr>
                                     <Row>
                                         <Col m={12} s={12}>
-                                            <TextInput m={3} s={3} value={this.state.messageSelected.originalHeaders} label="Headers" />
-                                            <TextInput m={9} s={9} value={this.state.messageSelected.originalMessage} label="Message" />
+                                            <TextInput m={3} s={3} type="number" name='maxLoop' value={this.state.params.maxLoop} onChange={this.handleChange} label="Nº de interações: " />
+                                            <TextInput m={3} s={3} type="number" name='computerError' value={this.state.params.computerError} onChange={this.handleChange} label="Erro computacional:" />
+                                            <TextInput m={3} s={3} type="number" name='millisecondsInterval' value={this.state.params.millisecondsInterval} onChange={this.handleChange} label="Intervalo em milisegundos:" />
+                                            <TextInput m={3} s={3} type="number" name='totalVariables' value={this.state.params.totalVariables} onChange={this.handleChangeTotalVariables} label="Nº de variáveis:" />
                                         </Col>
                                         <Col m={12} s={12}>
-                                            <TextInput m={3} s={3} name='resubmitHeaders' value={this.state.form.resubmitHeaders} onChange={this.handleChange} label="Change Headers" />
-                                            <TextInput m={9} s={9} name='resubmitMessage' value={this.state.form.resubmitMessage} onChange={this.handleChange} label="Change Message" />
+
+                                            <Table>
+                                                <thead>
+                                                    <tr>
+                                                        {this.state.params.matriz.map(this.renderLinearSystemHeader)}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {this.state.params.matriz.map(this.renderLinearSystem)}
+                                                </tbody>
+                                            </Table>
                                         </Col>
                                     </Row>
                                 </div>
                             </Card>
                         </form>
+                    </Col>
+                    <Col m={12} s={12}>
+                        <Card header={<CardTitle />}
+                            title="Iterações" >
+                            <hr></hr>
+                            <Collection>
+                                {this.state.results.map(this.renderList)}
+                            </Collection>
+                        </Card>
                     </Col>
                 </Row>
             </div>
