@@ -113,11 +113,11 @@ public class LinearSystemServiceImpl implements LinearSystemService {
             int position = 0;
             novaMatriz[line][position++] = BigDecimal.valueOf(line);
             BigDecimal resultEquation = matriz[line][matrizSize];
-            novaMatriz[line][position++] = resultEquation.divide(valueDiagonal);
+            novaMatriz[line][position++] = resultEquation.divide(valueDiagonal, 30, RoundingMode.DOWN);
             for (int column = 0; column < matrizSize; column++) {
                 BigDecimal valueLineColumn = matriz[line][column];
                 if (line != column) {
-                    novaMatriz[line][position++] = (valueLineColumn.multiply(BigDecimal.valueOf(-1.0))).divide(valueDiagonal);
+                    novaMatriz[line][position++] = (valueLineColumn.multiply(BigDecimal.valueOf(-1.0))).divide(valueDiagonal, 30, RoundingMode.DOWN);
                     ;
                 }
             }
@@ -134,7 +134,7 @@ public class LinearSystemServiceImpl implements LinearSystemService {
             BigDecimal valueDiagonal = BigDecimal.ZERO;
             Integer positionBeta = 0;
             for (int column = 0; column < matrizSize; column++) {
-                BigDecimal valueLineColumn = matriz[line][column];
+                BigDecimal valueLineColumn = matriz[line][column].abs();
                 if (line != column) {
                     BigDecimal valuePositionBeforeBeta = getPositionBeta(beta, positionBeta);
                     sumColums = sumColums.add(valuePositionBeforeBeta != null ? valueLineColumn.multiply(valuePositionBeforeBeta) : valueLineColumn);
@@ -142,7 +142,7 @@ public class LinearSystemServiceImpl implements LinearSystemService {
                     valueDiagonal = valueLineColumn;
                 }
             }
-            beta[line] = valueDiagonal.compareTo(BigDecimal.ZERO) == 1 ? sumColums.divide(valueDiagonal) : new BigDecimal(10000.0);
+            beta[line] = valueDiagonal.compareTo(BigDecimal.ZERO) == 1 ? sumColums.divide(valueDiagonal, 30, RoundingMode.DOWN) : new BigDecimal(10000.0);
             if (beta[line].compareTo(BigDecimal.ONE) == 1) {
                 throw new RuntimeException("Não converge");
             }
