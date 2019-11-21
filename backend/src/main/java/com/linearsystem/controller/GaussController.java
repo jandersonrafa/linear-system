@@ -52,7 +52,7 @@ public class GaussController {
 
     @PostMapping("/calculate")
     public String calculate(@RequestBody Params paramsUrl) {
-        linearSystemService.converge(paramsUrl.getMatriz());
+        linearSystemService.convergePorMetodoSassenfeld(paramsUrl.getMatriz());
         params = paramsUrl;
         String nextCode = String.valueOf(new Random().nextInt());
         lastCode = nextCode;

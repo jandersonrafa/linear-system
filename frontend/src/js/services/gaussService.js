@@ -6,6 +6,5 @@ export const calculate= (body) => {
 }
 
 export const getEmitter = (id) => {
-  return new EventSource("http://39f0dd9c.ngrok.io/api/gauss/emitter/" + id);
-  // return new EventSource("http://localhost:8082/api/gauss/emitter/" + id);
+  return new EventSource("http://localhost:8082/api/gauss/emitter/" + id);
 }

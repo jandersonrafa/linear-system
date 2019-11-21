@@ -17,9 +17,9 @@ public class LinearSystemServiceImpl implements LinearSystemService {
     public BigDecimal[] calculate(Params params, SseEmitter sseEmitter) {
         try {
             int matrizSize = params.getMatriz().length;
-            BigDecimal[][] pivotamento = pivotamento(params.getMatriz(), matrizSize);
+            BigDecimal[][] matrizInicial = metodoGaussPart1(params.getMatriz(), matrizSize);
             BigDecimal total = params.getMatriz()[0][matrizSize];
-            BigDecimal[] resultadosEtapas = metodoGaus(pivotamento, matrizSize, sseEmitter, params, total);
+            BigDecimal[] resultadosEtapas = metodoGausPart2(matrizInicial, matrizSize, sseEmitter, params, total);
             sseEmitter.complete();
             return resultadosEtapas;
         } catch (Exception ex) {
@@ -28,18 +28,12 @@ public class LinearSystemServiceImpl implements LinearSystemService {
         }
     }
 
-    private void printMatriz(BigDecimal[] resultadosEtapas) {
-        for (int line = 0; line < resultadosEtapas.length; line++) {
-            System.out.println("X" + line + 1 + ": " + resultadosEtapas[line] + "|");
-        }
-    }
-
-    private BigDecimal[] metodoGaus(BigDecimal[][] pivotamento, int matrizSize, SseEmitter sseEmitter, Params params, BigDecimal total) {
+    private BigDecimal[] metodoGausPart2(BigDecimal[][] matrizInicial, int matrizSize, SseEmitter sseEmitter, Params params, BigDecimal total) {
         BigDecimal[] resultadosEtapas = new BigDecimal[matrizSize];
         for (int column = 0; column < matrizSize; column++) {
             resultadosEtapas[column] = BigDecimal.ZERO;
         }
-        recursiveGauss(pivotamento, matrizSize, resultadosEtapas, 0, sseEmitter, params, total);
+        recursiveGauss(matrizInicial, matrizSize, resultadosEtapas, 0, sseEmitter, params, total);
         return resultadosEtapas;
     }
 
@@ -104,7 +98,7 @@ public class LinearSystemServiceImpl implements LinearSystemService {
         return stringBuilder.toString();
     }
 
-    private BigDecimal[][] pivotamento(BigDecimal[][] matriz, Integer matrizSize) {
+    private BigDecimal[][] metodoGaussPart1(BigDecimal[][] matriz, Integer matrizSize) {
         BigDecimal[][] novaMatriz = new BigDecimal[matrizSize][matrizSize + 1];
 
 
@@ -126,7 +120,7 @@ public class LinearSystemServiceImpl implements LinearSystemService {
     }
 
     @Override
-    public boolean converge(BigDecimal[][] matriz) {
+    public boolean convergePorMetodoSassenfeld(BigDecimal[][] matriz) {
         int matrizSize = matriz.length;
         BigDecimal[] beta = new BigDecimal[matrizSize];
         for (int line = 0; line < matrizSize; line++) {
@@ -144,7 +138,7 @@ public class LinearSystemServiceImpl implements LinearSystemService {
             }
             beta[line] = valueDiagonal.compareTo(BigDecimal.ZERO) == 1 ? sumColums.divide(valueDiagonal, 30, RoundingMode.DOWN) : new BigDecimal(10000.0);
             if (beta[line].compareTo(BigDecimal.ONE) == 1) {
-                throw new RuntimeException("Não converge");
+                throw new RuntimeException("Não converge, reorganize as linhas");
             }
         }
         return true;

@@ -9,5 +9,5 @@ public interface LinearSystemService {
 
     public BigDecimal[] calculate(Params matriz, SseEmitter sseEmitter);
 
-    public boolean converge(BigDecimal[][] matriz);
+    public boolean convergePorMetodoSassenfeld(BigDecimal[][] matriz);
 }
